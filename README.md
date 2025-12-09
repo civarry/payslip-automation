@@ -2,6 +2,9 @@
 
 A Streamlit web application that automatically generates professional payslip PDFs and sends them to employees via email.
 
+## Preview
+<img width="1908" height="955" alt="image" src="https://github.com/user-attachments/assets/f1a8a6e2-4371-4cdf-b392-2cb5b8fb7c9d" />
+
 ## Features
 
 - 📤 Upload Excel payroll data via drag-and-drop or file picker
