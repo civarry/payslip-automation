@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Environment
+.env
+.env.local
+
+# Data files - exclude actual payroll data but keep templates
+*.xlsx
+!templates/payroll_template.xlsx
+payslips/
+*.pdf
+
+# Config files with credentials - exclude user configs but keep template
+company_config.json
+**/company_config.json
+!templates/company_config.json
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+temp/
+tmp/

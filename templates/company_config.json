@@ -1,0 +1,10 @@
+{
+  "company_name": "Your Company Name Here",
+  "footer_text": "Full details of your pay for the period covered are given above. Please check carefully. Any questions or discrepancy concerning the accuracy of this statement should be taken up with this Office immediately.",
+  "document_id": "D-HR-20001.01",
+  "effectivity_date": "January 1, 2025",
+  "smtp": {
+    "email": "your-email@gmail.com",
+    "password": "xxxx xxxx xxxx xxxx"
+  }
+}
