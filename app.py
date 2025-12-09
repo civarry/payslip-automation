@@ -262,16 +262,13 @@ if uploaded_file is not None:
                     payroll_period = df['PayrollPeriod'].iloc[0] if 'PayrollPeriod' in df.columns else "N/A"
                     st.metric("Payroll Period", payroll_period)
 
-                # Select columns to display
-                display_columns = ['EmployeeNumber', 'Name', 'Position', 'Email',
-                                 'GrossIncome', 'TotalDeductions', 'NetPay']
-                # Only include columns that exist
-                display_columns = [col for col in display_columns if col in df.columns]
+                # Display all columns
+                df_display = df.copy()
 
-                df_display = df[display_columns].copy()
-
-                # Format currency columns
-                for col in ['GrossIncome', 'TotalDeductions', 'NetPay']:
+                # Format currency columns (common ones)
+                currency_columns = ['GrossIncome', 'TotalDeductions', 'NetPay',
+                                  'BasicPay', 'Allowance', 'Overtime', 'Deductions']
+                for col in currency_columns:
                     if col in df_display.columns:
                         df_display[col] = df_display[col].apply(lambda x: f"₱{x:,.2f}")
 
