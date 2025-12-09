@@ -158,48 +158,6 @@ For detailed payslips, include these columns:
 
 Click the "Download Template" button in the app to get a sample Excel file with the correct format.
 
-## Deployment to Streamlit Cloud
-
-### Prerequisites
-
-1. GitHub account
-2. Streamlit Cloud account (free at [share.streamlit.io](https://share.streamlit.io))
-
-### Deployment Steps
-
-1. **Create GitHub repository**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin <your-repo-url>
-   git push -u origin main
-   ```
-
-2. **Deploy to Streamlit Cloud**
-   - Go to [share.streamlit.io](https://share.streamlit.io)
-   - Sign in with GitHub
-   - Click "New app"
-   - Select your repository
-   - Set main file path: `app.py`
-   - Click "Deploy"
-
-3. **Wait for deployment**
-   - Streamlit will install dependencies
-   - Your app will be live in a few minutes
-
-4. **Share your app**
-   - Copy the URL (e.g., `https://yourapp.streamlit.app`)
-   - Share with users who need to generate payslips
-
-### Important Notes for Deployment
-
-- The `assets/logo.png` file must be included in your repository
-- Don't commit `.env` files or actual payroll data
-- SMTP credentials are entered in the UI (not stored in code)
-- Free tier supports up to 1 GB RAM and 1 CPU (sufficient for most use cases)
-
 ## Project Structure
 
 ```
@@ -236,12 +194,6 @@ payslip-automation/
 - ✅ Store config file in a secure location on your computer
 - ✅ Use file permissions to restrict access (chmod 600 on Unix/Mac)
 - ✅ Back up config file to secure location
-- ✅ Add `company_config.json` to `.gitignore` if using version control
-- ❌ NEVER commit config file to git repositories
-- ❌ NEVER share config file via email or messaging
-- ❌ NEVER store config file in public folders (Dropbox, Google Drive, etc.)
-
-**Git Users:** The `.gitignore` file already excludes `company_config.json` to prevent accidental commits.
 
 ### Data Handling
 
