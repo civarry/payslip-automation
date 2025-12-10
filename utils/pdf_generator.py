@@ -126,7 +126,7 @@ def create_payslip_pdf(row, output_dir, logo_path=None, company_config=None):
     c.drawString(left + 140, table_top - 2 * line_h + 4, f"{get_safe(row,'BasicSalary',0):,.2f}")
     c.drawString(mid_x + 140, table_top - 2 * line_h + 4, name)
 
-    c.drawString(left + 140, table_top - 3 * line_h + 4, f"{get_safe(row,'Allowance',0):,.2f}")
+    c.drawString(left + 140, table_top - 3 * line_h + 4, f"{get_safe(row,'MonthlyAllowance',0):,.2f}")
     c.drawString(mid_x + 140, table_top - 3 * line_h + 4, position)
 
     y = table_bottom - 30
@@ -147,7 +147,7 @@ def create_payslip_pdf(row, output_dir, logo_path=None, company_config=None):
         ("Special Holiday OT", None, None),
         ("Total Night Diff.", "NightDiffHours", "NightDiffAmount"),
         ("Offset", "OffsetHours", "OffsetAmount"),
-        ("Paid Leave", None, "PaidLeaveAmount"),
+        ("Paid Leave", "PaidLeaveHours", "PaidLeaveAmount"),
         ("Adjustment", None, "AdjustmentEarnings"),
         ("Allowance", None, "Allowance"),
         ("13th Month Pay", None, "ThirteenthMonthPay"),
