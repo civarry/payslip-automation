@@ -2,13 +2,34 @@
 
 # Required Excel columns for validation
 REQUIRED_COLUMNS = [
-    'EmployeeNumber',
-    'Name',
-    'Email',
-    'PayrollPeriod',
+    # Employee Info
+    'EmployeeNumber', 'Name', 'Position', 'Email', 'PayrollPeriod',
+
+    # Salary
+    'BasicSalary', 'MonthlyAllowance', 'Allowance',
+
+    # Regular Work
+    'RegularHours', 'RegularAmount',
+    'RegularOTHours', 'RegularOTAmount',
+
+    # Holidays
+    'LegalHolidayHours', 'LegalHolidayAmount',
+    'SpecialHolidayHours', 'SpecialHolidayAmount',
+
+    # Other Earnings
+    'NightDiffHours', 'NightDiffAmount',
+    'OffsetHours', 'OffsetAmount',
+    'PaidLeaveHours', 'PaidLeaveAmount',
+    'AdjustmentEarnings', 'ThirteenthMonthPay', 'OthersEarnings',
+
+    # Totals
     'GrossIncome',
-    'TotalDeductions',
-    'NetPay'
+
+    # Deductions
+    'SSSContribution', 'PhilhealthContribution', 'PagibigContribution',
+    'PagibigLoan', 'SSSLoan', 'WithholdingTax',
+    'AdjustmentDeductions', 'OthersDeductions',
+    'TotalDeductions', 'NetPay'
 ]
 
 # SMTP Configuration
