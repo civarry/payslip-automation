@@ -55,7 +55,7 @@ class EmailSender:
                 pass  # Ignore errors when closing
             self.smtp = None
 
-    def send_payslip(self, row, pdf_path: str) -> Tuple[bool, str]:
+    def send_payslip(self, row, pdf_path: str) -> Tuple[bool, str, bool]:
         """
         Send payslip email with PDF attachment
 
@@ -64,16 +64,19 @@ class EmailSender:
             pdf_path: Path to PDF file
 
         Returns:
-            Tuple[bool, str]: (success, message)
+            Tuple[bool, str, bool]: (success, message, quota_exceeded)
+                - success: True if email sent successfully
+                - message: Status message
+                - quota_exceeded: True if Gmail daily quota was exceeded
         """
         try:
             # Check if PDF exists
             if not Path(pdf_path).exists():
-                return False, f"PDF file not found: {pdf_path}"
+                return False, f"PDF file not found: {pdf_path}", False
 
             # Check if SMTP connection is established
             if not self.smtp:
-                return False, "Not connected to SMTP server"
+                return False, "Not connected to SMTP server", False
 
             # Build email message
             to_email = row["Email"]
@@ -109,7 +112,15 @@ class EmailSender:
 
             # Send email
             self.smtp.send_message(msg)
-            return True, f"Sent to {to_email}"
+            return True, f"Sent to {to_email}", False
 
+        except smtplib.SMTPSenderRefused as e:
+            # Check if this is a quota exceeded error
+            error_msg = str(e).lower()
+            if "quota" in error_msg or "limit" in error_msg or "554" in str(e) or "450" in str(e):
+                return False, "QUOTA_EXCEEDED: Gmail daily sending limit reached", True
+            return False, f"SMTP error: {str(e)}", False
+        except smtplib.SMTPException as e:
+            return False, f"SMTP error: {str(e)}", False
         except Exception as e:
-            return False, f"Error: {str(e)}"
+            return False, f"Error: {str(e)}", False

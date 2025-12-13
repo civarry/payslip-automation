@@ -10,7 +10,9 @@ import shutil
 import zipfile
 import io
 import json
+import atexit
 from pathlib import Path
+from datetime import datetime
 
 from utils.pdf_generator import create_payslip_pdf
 from utils.email_sender import EmailSender
@@ -22,6 +24,54 @@ from config.constants import (
     DEFAULT_DOCUMENT_ID, DEFAULT_EFFECTIVITY_DATE,
     DEFAULT_LOGO_PATH
 )
+
+# ---------- TEMP FILE CLEANUP ----------
+
+def cleanup_old_temp_dirs():
+    """Clean up old temporary directories created by this app"""
+    try:
+        temp_base = Path(tempfile.gettempdir())
+        current_time = datetime.now()
+
+        # Find all temp directories older than 24 hours
+        for temp_dir in temp_base.glob("tmp*"):
+            if temp_dir.is_dir():
+                try:
+                    # Check if directory is older than 24 hours
+                    dir_mtime = datetime.fromtimestamp(temp_dir.stat().st_mtime)
+                    age_hours = (current_time - dir_mtime).total_seconds() / 3600
+
+                    # If older than 24 hours and contains payslip PDFs, clean it up
+                    if age_hours > 24:
+                        pdf_files = list(temp_dir.glob("payslip_*.pdf"))
+                        if pdf_files:  # Only delete if it looks like our temp dir
+                            shutil.rmtree(temp_dir, ignore_errors=True)
+                except (OSError, PermissionError):
+                    # Skip directories we can't access
+                    pass
+    except Exception:
+        # Don't fail app startup if cleanup fails
+        pass
+
+def cleanup_temp_dir(temp_dir_path):
+    """Safely cleanup a temporary directory"""
+    if temp_dir_path and Path(temp_dir_path).exists():
+        try:
+            # Only cleanup if it's in the system temp directory (safety check)
+            if str(Path(temp_dir_path).parent) == tempfile.gettempdir():
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
+        except Exception:
+            pass
+
+# Cleanup old temp directories on app startup
+cleanup_old_temp_dirs()
+
+# Register cleanup on exit
+@atexit.register
+def cleanup_on_exit():
+    """Cleanup temp directory when app exits"""
+    if hasattr(st.session_state, 'temp_dir') and st.session_state.temp_dir:
+        cleanup_temp_dir(st.session_state.temp_dir)
 
 # ---------- PAGE CONFIGURATION ----------
 
@@ -367,6 +417,7 @@ if uploaded_file is not None:
                         st.stop()
 
                 # Process each employee
+                quota_exceeded = False
                 for idx, (_, row) in enumerate(df.iterrows()):
                     try:
                         # Update progress
@@ -384,7 +435,21 @@ if uploaded_file is not None:
 
                         # Send email if not dry run
                         if not dry_run and email_sender:
-                            success, message = email_sender.send_payslip(row, pdf_path)
+                            success, message, quota_exceeded = email_sender.send_payslip(row, pdf_path)
+
+                            # Check if quota was exceeded
+                            if quota_exceeded:
+                                results.append({
+                                    'Employee': row['Name'],
+                                    'Email': row['Email'],
+                                    'Status': 'Quota Exceeded',
+                                    'Message': 'Gmail daily limit reached - email not sent',
+                                    'PDF': pdf_path
+                                })
+                                # Stop processing immediately
+                                status_text.text(f"⚠️ Gmail quota exceeded at employee {idx + 1}/{len(df)}")
+                                break
+
                             results.append({
                                 'Employee': row['Name'],
                                 'Email': row['Email'],
@@ -422,16 +487,50 @@ if uploaded_file is not None:
                 st.session_state.processing_results = pd.DataFrame(results)
 
                 # Show completion message
-                if dry_run:
+                if quota_exceeded:
+                    # Count how many were successfully sent
+                    sent_count = len([r for r in results if r['Status'] == 'Sent'])
+                    remaining_count = len(df) - sent_count
+                    st.error(f"⚠️ Gmail daily sending limit reached!")
+                    st.warning(f"📊 Sent: {sent_count} | Remaining: {remaining_count}")
+                    st.info("💡 Wait 24 hours and re-run to send remaining payslips, or upload an Excel with only the remaining employees.")
+                elif dry_run:
                     st.success(f"✅ Dry run completed! PDFs saved to: {st.session_state.temp_dir}")
                 else:
                     st.success("✅ Processing completed!")
                 st.rerun()
 
         else:
-            st.error("❌ Excel file validation failed:")
+            st.error("❌ Excel file validation failed!")
+            st.write("")  # Add spacing
+
+            # Check if there are missing column errors
+            has_missing_columns = any("Missing required columns:" in error for error in validation_errors)
+
+            if has_missing_columns:
+                st.warning("**Column Name Mismatch Detected**")
+                st.write("Your Excel file is missing required columns. Please ensure column names match EXACTLY (case-sensitive).")
+                st.write("")
+
+            # Display errors
             for error in validation_errors:
-                st.error(f"  • {error}")
+                if "Missing required columns:" in error:
+                    # Extract column names from error message
+                    missing_cols = error.replace("Missing required columns: ", "")
+                    st.error(f"**Missing columns:** {missing_cols}")
+                else:
+                    st.error(f"• {error}")
+
+            # Show helpful instructions
+            if has_missing_columns:
+                st.write("")
+                st.info("💡 **How to fix:**\n"
+                       "1. Download the Excel template from the sidebar (📥 Download Templates)\n"
+                       "2. Compare your column names with the template\n"
+                       "3. Rename your columns to match exactly\n"
+                       "4. Column names are case-sensitive (e.g., 'EmployeeNumber' not 'Employee Number')")
+
+            st.write("")
 
     except Exception as e:
         st.error(f"❌ Error loading file: {str(e)}")
@@ -496,9 +595,11 @@ if st.session_state.processing_results is not None:
         with col3:
             # Clear results and temp files
             if st.button("🗑️ Clear", width='stretch'):
-                # Clean up temp directory
-                if st.session_state.temp_dir and Path(st.session_state.temp_dir).exists():
-                    shutil.rmtree(st.session_state.temp_dir)
+                # Clean up temp directory (but not if it's a user-specified dry-run directory)
+                if st.session_state.temp_dir:
+                    # Only auto-cleanup if it's in system temp (not user's dry-run directory)
+                    if str(Path(st.session_state.temp_dir).parent) == tempfile.gettempdir():
+                        cleanup_temp_dir(st.session_state.temp_dir)
                     st.session_state.temp_dir = None
 
                 # Clear results
