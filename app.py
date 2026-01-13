@@ -207,66 +207,16 @@ with st.sidebar:
 
     # Combined Settings expander
     with st.expander("⚙️ Settings", expanded=False):
-        # Configuration Upload
-        st.subheader("Configuration")
+        # Configuration Container
+        with st.container(border=True):
+            st.subheader("Configuration")
 
-        # Config file upload
-        config_file = st.file_uploader(
-            "Upload Config File",
-            type=['json'],
-            help="Upload your company_config.json file (download template above)",
-            key="company_config_uploader"
-        )
+            # Show current config if loaded, otherwise show uploader
+            if st.session_state.get('config_loaded', False) and st.session_state.company_name:
+                st.caption("**Company:** " + st.session_state.company_name)
+                st.caption("**Email:** " + st.session_state.smtp_email)
 
-        # Load config if uploaded
-        if config_file is not None:
-            # Only process if not already loaded (prevent re-processing on every rerun)
-            if not st.session_state.get('config_loaded', False):
-                success, config_data, message = load_company_config(config_file)
-                if success:
-                    # Load company details
-                    st.session_state.company_name = config_data['company_name']
-                    st.session_state.footer_text = config_data['footer_text']
-                    st.session_state.document_id = config_data['document_id']
-                    st.session_state.effectivity_date = config_data['effectivity_date']
-
-                    # Load SMTP credentials
-                    st.session_state.smtp_email = config_data['smtp_email']
-                    st.session_state.smtp_password = config_data['smtp_password']
-
-                    # Auto-validate SMTP connection
-                    with st.spinner("Validating SMTP connection..."):
-                        smtp_success, smtp_message = test_smtp_connection(
-                            config_data['smtp_email'],
-                            config_data['smtp_password'],
-                            SMTP_SERVER,
-                            SMTP_PORT
-                        )
-                        st.session_state.smtp_validated = smtp_success
-
-                    st.session_state.config_loaded = True
-
-                    # Show one-time message based on SMTP validation
-                    if not smtp_success:
-                        st.error(f"❌ SMTP validation failed: {smtp_message}")
-                        st.info("💡 Check your SMTP credentials in the config file")
-                else:
-                    st.error(f"❌ {message}")
-                    st.session_state.config_loaded = False
-
-        # Show current config if loaded
-        if st.session_state.get('config_loaded', False) and st.session_state.company_name:
-            st.divider()
-
-            # Display loaded configuration summary
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.caption("**Loaded Configuration:**")
-                st.caption(f"🏢 {st.session_state.company_name}")
-                st.caption(f"📧 {st.session_state.smtp_email}")
-            with col2:
-                if st.button("Clear", width='stretch', help="Clear configuration"):
-                    # Clear all config-related session state
+                if st.button("Clear Configuration", help="Clear configuration", width='stretch'):
                     st.session_state.company_name = ""
                     st.session_state.footer_text = ""
                     st.session_state.document_id = ""
@@ -276,15 +226,85 @@ with st.sidebar:
                     st.session_state.smtp_validated = False
                     st.session_state.config_loaded = False
                     st.rerun()
+            else:
+                # Config file upload
+                config_file = st.file_uploader(
+                    "Upload Config File",
+                    type=['json'],
+                    help="Upload your company_config.json file (download template above)",
+                    key="company_config_uploader"
+                )
 
-        st.divider()
+                # Load config if uploaded
+                if config_file is not None:
+                    success, config_data, message = load_company_config(config_file)
+                    if success:
+                        # Load company details
+                        st.session_state.company_name = config_data['company_name']
+                        st.session_state.footer_text = config_data['footer_text']
+                        st.session_state.document_id = config_data['document_id']
+                        st.session_state.effectivity_date = config_data['effectivity_date']
 
-        # Company logo (always visible)
-        company_logo = st.file_uploader(
-            "Logo (optional)",
-            type=['png', 'jpg', 'jpeg'],
-            help="Appears at top of payslip"
-        )
+                        # Load SMTP credentials
+                        st.session_state.smtp_email = config_data['smtp_email']
+                        st.session_state.smtp_password = config_data['smtp_password']
+
+                        # Auto-validate SMTP connection
+                        with st.spinner("Validating SMTP connection..."):
+                            smtp_success, smtp_message = test_smtp_connection(
+                                config_data['smtp_email'],
+                                config_data['smtp_password'],
+                                SMTP_SERVER,
+                                SMTP_PORT
+                            )
+                            st.session_state.smtp_validated = smtp_success
+
+                        st.session_state.config_loaded = True
+
+                        # Show one-time message based on SMTP validation
+                        if not smtp_success:
+                            st.error(f"❌ SMTP validation failed: {smtp_message}")
+                            st.info("💡 Check your SMTP credentials in the config file")
+
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {message}")
+
+        # Logo Container
+        with st.container(border=True):
+            st.subheader("Company Logo")
+
+            # Check if custom logo is uploaded
+            has_custom_logo = (
+                st.session_state.get('company_logo_path') and
+                st.session_state.company_logo_path != DEFAULT_LOGO_PATH and
+                Path(st.session_state.company_logo_path).exists()
+            )
+
+            if has_custom_logo:
+                st.caption("**Status:** Custom logo uploaded")
+
+                if st.button("Clear Logo", help="Remove custom logo", width='stretch'):
+                    st.session_state.company_logo_path = DEFAULT_LOGO_PATH
+                    st.rerun()
+            else:
+                company_logo = st.file_uploader(
+                    "Upload Logo (optional)",
+                    type=['png', 'jpg', 'jpeg'],
+                    help="Appears at top of payslip"
+                )
+
+                if company_logo:
+                    # Ensure temp_dir exists
+                    if not st.session_state.temp_dir:
+                        st.session_state.temp_dir = tempfile.mkdtemp()
+
+                    # Save logo to temp location
+                    logo_path = Path(st.session_state.temp_dir) / "custom_logo.png"
+                    with open(logo_path, "wb") as f:
+                        f.write(company_logo.getbuffer())
+                    st.session_state.company_logo_path = str(logo_path)
+                    st.rerun()
 
     # Gmail App Password Guide
     with st.expander("ℹ️ Gmail App Password Guide"):
@@ -404,14 +424,8 @@ if uploaded_file is not None:
                     if st.session_state.temp_dir is None:
                         st.session_state.temp_dir = tempfile.mkdtemp()
 
-                # Determine logo path
-                logo_path = DEFAULT_LOGO_PATH
-                if company_logo is not None:
-                    # Save custom logo to temp
-                    custom_logo_path = Path(st.session_state.temp_dir) / "custom_logo.png"
-                    with open(custom_logo_path, "wb") as f:
-                        f.write(company_logo.getbuffer())
-                    logo_path = str(custom_logo_path)
+                # Determine logo path (use session state)
+                logo_path = st.session_state.company_logo_path
 
                 # Prepare company config
                 company_config = {

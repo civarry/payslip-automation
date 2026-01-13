@@ -95,8 +95,8 @@ def create_payslip_pdf(row, output_dir, logo_path=None, company_config=None):
         )
         y -= logo_h + 20
 
-    c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(width / 2, y, company_name)
+    c.setFont("Times-Bold", 12)
+    c.drawCentredString(width / 2, y, company_name.upper())
     y -= 30
 
     # ---------- TOP INFO TABLE ----------
