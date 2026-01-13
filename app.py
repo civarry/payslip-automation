@@ -4,12 +4,14 @@ Generate and email payslips automatically from Excel data
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import tempfile
 import shutil
 import zipfile
 import io
 import json
+import chardet
 import atexit
 from pathlib import Path
 from datetime import datetime
@@ -82,12 +84,34 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ---------- HIDE STREAMLIT BRANDING ----------
+
+st.markdown("""
+<style>
+    /* Hide Fork button and GitHub icon */
+    [data-testid="stToolbarActionButton"] {
+        display: none !important;
+    }
+
+    /* Hide footer */
+    footer {
+        visibility: hidden !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # ---------- COMPANY CONFIG HELPERS ----------
 
 def load_company_config(uploaded_file):
     """Load company configuration from uploaded JSON file"""
     try:
-        config_data = json.load(uploaded_file)
+        # Read raw bytes and auto-detect encoding
+        raw_bytes = uploaded_file.read()
+        detected = chardet.detect(raw_bytes)
+        encoding = detected.get('encoding', 'utf-8') or 'utf-8'
+
+        content = raw_bytes.decode(encoding)
+        config_data = json.loads(content)
 
         # Validate SMTP nested structure
         smtp_config = config_data.get('smtp', {})
@@ -108,6 +132,8 @@ def load_company_config(uploaded_file):
 
     except json.JSONDecodeError:
         return False, None, "Invalid JSON file. Please check the file format."
+    except UnicodeDecodeError:
+        return False, None, "Unable to read file encoding. Please try re-saving the file."
     except Exception as e:
         return False, None, f"Error loading config: {str(e)}"
 
@@ -605,3 +631,33 @@ if st.session_state.processing_results is not None:
                 # Clear results
                 st.session_state.processing_results = None
                 st.rerun()
+
+# ---------- HIDE STREAMLIT CLOUD BRANDING ----------
+# Hide profile preview & Streamlit Cloud badge (must be at end of app)
+components.html("""
+<script>
+    const topDoc = window.top.document;
+
+    // Inject CSS into top document
+    const css = `
+        [class*="_profilePreview_"] { display: none !important; }
+        [class*="_profileContainer_"] { display: none !important; }
+        a[href*="streamlit.io/cloud"] { display: none !important; }
+        [class*="_viewerBadge_"] { display: none !important; }
+    `;
+    const style = document.createElement('style');
+    style.textContent = css;
+    try { topDoc.head.appendChild(style); } catch(e) {}
+
+    // Hide elements via JS (backup)
+    function hideElements() {
+        try {
+            topDoc.querySelectorAll('[class*="_profilePreview_"], [class*="_profileContainer_"]').forEach(el => el.style.display = 'none');
+            topDoc.querySelectorAll('a[href*="streamlit.io/cloud"]').forEach(el => el.style.display = 'none');
+            topDoc.querySelectorAll('[class*="_viewerBadge_"]').forEach(el => el.style.display = 'none');
+        } catch(e) {}
+    }
+
+    setInterval(hideElements, 500);
+</script>
+""", height=0, scrolling=False)
